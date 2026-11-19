@@ -16,6 +16,26 @@
         (get include-ns ns)
         (some #(re-matches % (name ns)) include-regexes)))))
 
+
+(defn focus-mode? [options]
+  (let [dirs (or (:dir options)
+                 #{"test"})
+        nses (->> dirs
+                  (map io/file)
+                  (mapcat find/find-namespaces-in-dir))
+        nses (filter (ns-filter options) nses)
+        focus-count (atom 0)]
+    (dorun (map require nses))
+    (doseq [ns nses]
+      (doseq [[_name var] (ns-publics ns)]
+        (when (:test (meta var))
+          (when (:focus (meta var))
+            (swap! focus-count inc)))))
+    (if (pos-int? @focus-count)
+      true
+      false)))
+
+
 (defn- var-filter
   [{:keys [var include exclude]}]
   (let [test-specific (if var
@@ -26,7 +46,7 @@
                         (constantly true))
         test-inclusion (if include
                          #((apply some-fn include) (meta %))
-                        (constantly true))
+                         (constantly true))
         test-exclusion (if exclude
                          #((complement (apply some-fn exclude)) (meta %))
                          (constantly true))]
@@ -63,11 +83,14 @@
   [options]
   (let [dirs (or (:dir options)
                  #{"test"})
+        focus-mode? (:focus-mode? options)
         nses (->> dirs
                   (map io/file)
                   (mapcat find/find-namespaces-in-dir))
         nses (filter (ns-filter options) nses)]
-    (println (format "\nRunning tests in %s" dirs))
+    (if focus-mode?
+      (println (format "\nRunning focused tests in %s" dirs))
+      (println (format "\nRunning all tests in %s" dirs)))
     (dorun (map require nses))
     (try
       (filter-vars! nses (var-filter options))
@@ -102,6 +125,8 @@
    ["-e" "--exclude KEYWORD" "Exclude tests with this metadata keyword."
     :parse-fn parse-kw
     :assoc-fn accumulate]
+   ["-a" "--all" "Run all tests regardsless of test metadata."
+    :assoc-fn assoc]
    ["-H" "--test-help" "Display this help message"]])
 
 (defn- help
@@ -124,7 +149,19 @@
       (if (-> args :options :test-help)
         (help args)
         (try
-          (let [{:keys [fail error]} (test (:options args))]
+          (let [options' (:options args)
+                all (:all options')
+                excludes (if (seq (:excludes args))
+                           (:excludes args)
+                           [:exclude :skip :ignore])
+                options'' (assoc options'
+                            :excludes (if all
+                                        #{}
+                                        excludes)
+                            :focus-mode? (if all
+                                           false
+                                           (focus-mode? options')))
+                {:keys [fail error]} (test options'')]
             (System/exit (if (zero? (+ fail error)) 0 1)))
           (finally
             ;; Only called if `test` raises an exception

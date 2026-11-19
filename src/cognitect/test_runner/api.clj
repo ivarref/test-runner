@@ -3,17 +3,20 @@
   (:require
     [cognitect.test-runner :as tr]))
 
+
 (defn- do-test
-  [{:keys [dirs nses patterns vars includes excludes]}]
-  (let [adapted {:dir (when (seq dirs) (set dirs))
-                 :namespace (when (seq nses) (set nses))
+  [{:keys [dirs nses patterns vars includes excludes focus-mode?]}]
+  (let [adapted {:dir             (when (seq dirs) (set dirs))
+                 :namespace       (when (seq nses) (set nses))
                  :namespace-regex (when (seq patterns) (map re-pattern patterns))
-                 :var (when (seq vars) (set vars))
-                 :include (when (seq includes) (set includes))
-                 :exclude (when (seq excludes) (set excludes))}]
+                 :var             (when (seq vars) (set vars))
+                 :include         (when (seq includes) (set includes))
+                 :exclude         (when (seq excludes) (set excludes))
+                 :focus-mode?     focus-mode?}]
     (tr/test adapted)))
 
-(defn test
+
+(defn- test-org
   "Invoke the test-runner with the following options:
 
   * :dirs - coll of directories containing tests, default= [\"test\"]
@@ -22,9 +25,38 @@
   * :vars - coll of fully qualified symbols to run tests on
   * :includes - coll of test metadata keywords to include
   * :excludes - coll of test metadata keywords to exclude
+  * :all - include all tests regardless of metadata keywords\n
 
   If neither :nses nor :patterns is supplied, use `:patterns [\".*-test$\"]`."
   [opts]
   (let [{:keys [fail error]} (do-test opts)]
     (when (> (+ fail error) 0)
       (throw (ex-info "Test failures or errors occurred." {})))))
+
+
+(defn test [{:keys [dirs includes excludes nses patterns all] :as opts}]
+  (let [adapted {:dir             (if (seq dirs)
+                                    (set dirs)
+                                    (set ["test"]))
+                 :namespace       (when (seq nses) (set nses))
+                 :namespace-regex (when (seq patterns) (map re-pattern patterns))
+                 :excludes        (if all
+                                    #{}
+                                    (if (seq excludes)
+                                      excludes
+                                      [:exclude
+                                       :skip
+                                       :ignore]))}
+        focus-mode? (if all
+                      false
+                      (tr/focus-mode? adapted))
+        adapted' (assoc adapted
+                   :focus-mode? focus-mode?
+                   :includes (if (seq includes)
+                               includes
+                               (if focus-mode?
+                                 [:focus]
+                                 nil)))]
+    (test-org adapted')))
+
+
