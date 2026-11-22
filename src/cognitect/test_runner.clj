@@ -3,7 +3,8 @@
             [clojure.java.io :as io]
             [clojure.test :as test]
             [clojure.tools.cli :as cli])
-  (:refer-clojure :exclude [test]))
+  (:refer-clojure :exclude [test])
+  (:import (java.lang.management ManagementFactory)))
 
 (defn- ns-filter
   [{:keys [namespace namespace-regex]}]
@@ -80,7 +81,7 @@
         (-> ns ns-publics vals)))
 
 
-(defonce start-time (atom (System/currentTimeMillis)))
+(defonce start-time (atom nil))
 
 
 (defmethod test/report :summary [m]
@@ -96,7 +97,9 @@
 
 (defn test
   [options]
-  (reset! start-time (System/currentTimeMillis))
+  (if (nil? @start-time)
+    (reset! start-time (.getStartTime (ManagementFactory/getRuntimeMXBean)))
+    (reset! start-time (System/currentTimeMillis)))
   (let [dirs (or (:dir options)
                  #{"test"})
         focus-mode? (:focus-mode? options)
