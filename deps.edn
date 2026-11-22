@@ -6,9 +6,9 @@
                       :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}}
                       :main-opts   ["-m" "cognitect.test-runner"]
                       :exec-fn     cognitect.test-runner.api/test}
-           :release! {:deps      {org.codeberg.ivarref/glittertind {:local/root "/Users/ire/code/clojure/glittertind"}}
-                                                                    ;:git/tag "0.1.14"
-                                                                    ;:git/sha "11c8bac80b2224415692fd04580a920a7d96bea0"}}
+           :release! {:deps      {org.codeberg.ivarref/glittertind {:git/url "https://codeberg.org/ivarref/glittertind.git"
+                                                                    :git/tag "0.1.17"
+                                                                    :git/sha "25829f2ba3db6e2e8b0eff0cbb89f79305200abd"}}
                       :exec-fn   glittertind.core/release!
                       :exec-args {:major-version 0
                                   :minor-version 1}}}}
