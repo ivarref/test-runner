@@ -16,8 +16,8 @@ Tests having `^:skip` metadata will be skipped.
 ```clojure
 :aliases {:test {:extra-paths ["test"]
                  :extra-deps  {io.github.ivarref/test-runner
-                               {:git/sha "0b404b477b5fb50742dee5a4087050d0eceff260"
-                                :git/tag "0.1.89"}}
+                               {:git/sha "1cbd6baf5e35bb2695a442808b609702a86b3876"
+                                :git/tag "0.1.91"}}
                  :main-opts   ["-m" "cognitect.test-runner"]
                  :exec-fn     cognitect.test-runner.api/test}}
 ```
