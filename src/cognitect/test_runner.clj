@@ -79,8 +79,24 @@
   (some (comp :test meta)
         (-> ns ns-publics vals)))
 
+
+(defonce start-time (atom (System/currentTimeMillis)))
+
+
+(defmethod test/report :summary [m]
+  (let [spent-ms (- (System/currentTimeMillis)
+                    @start-time)
+        spent-secs (format "%.3f secs." (double (/ spent-ms 1000)))]
+    (test/with-test-out
+      (println "\nRan" (:test m) "tests containing"
+               (+ (:pass m) (:fail m) (:error m)) "assertions in"
+               spent-secs)
+      (println (:fail m) "failures," (:error m) "errors."))))
+
+
 (defn test
   [options]
+  (reset! start-time (System/currentTimeMillis))
   (let [dirs (or (:dir options)
                  #{"test"})
         focus-mode? (:focus-mode? options)

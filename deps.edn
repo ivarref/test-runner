@@ -1,8 +1,14 @@
-{:paths ["src"]
- :deps {org.clojure/tools.namespace {:mvn/version "1.3.0"}
-        org.clojure/tools.cli {:mvn/version "1.0.206"}
-        org.clojure/clojure {:mvn/version "1.9.0"}}
- :aliases {:test {:extra-paths ["test"]
-                  :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}}
-                  :main-opts ["-m" "cognitect.test-runner"]
-                  :exec-fn cognitect.test-runner.api/test}}}
+{:paths   ["src"]
+ :deps    {org.clojure/tools.namespace {:mvn/version "1.3.0"}
+           org.clojure/tools.cli       {:mvn/version "1.0.206"}
+           org.clojure/clojure         {:mvn/version "1.9.0"}}
+ :aliases {:test     {:extra-paths ["test"]
+                      :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}}
+                      :main-opts   ["-m" "cognitect.test-runner"]
+                      :exec-fn     cognitect.test-runner.api/test}
+           :release! {:deps      {org.codeberg.ivarref/glittertind {:git/url "https://codeberg.org/ivarref/glittertind.git"
+                                                                    :git/tag "0.1.10"
+                                                                    :git/sha "f2c2d314d83b36e89b36866491b84b94b8aa5da7"}}
+                      :exec-fn   glittertind.core/release!
+                      :exec-args {:major-version 0
+                                  :minor-version 1}}}}
