@@ -173,13 +173,19 @@
                 excludes (if (seq (:excludes args))
                            (:excludes args)
                            [:exclude :skip :ignore])
+                focus-mode? (if all
+                              false
+                              (focus-mode? options'))
                 options'' (assoc options'
                             :excludes (if all
                                         #{}
                                         excludes)
-                            :focus-mode? (if all
-                                           false
-                                           (focus-mode? options')))
+                            :focus-mode? focus-mode?
+                            :includes (if (seq (:includes args))
+                                        (:includes args)
+                                        (if focus-mode?
+                                          [:focus]
+                                          nil)))
                 {:keys [fail error]} (test options'')]
             (System/exit (if (zero? (+ fail error)) 0 1)))
           (finally
