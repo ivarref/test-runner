@@ -170,22 +170,22 @@
         (try
           (let [options' (:options args)
                 all (:all options')
-                excludes (if (seq (:excludes args))
-                           (:excludes args)
-                           [:exclude :skip :ignore])
+                excludes (if (seq (:exclude options'))
+                           (:exclude options')
+                           #{:exclude :skip :ignore})
                 focus-mode? (if all
                               false
                               (focus-mode? options'))
                 options'' (assoc options'
-                            :excludes (if all
-                                        #{}
-                                        excludes)
+                            :exclude (if all
+                                       #{}
+                                       excludes)
                             :focus-mode? focus-mode?
-                            :includes (if (seq (:includes args))
-                                        (:includes args)
-                                        (if focus-mode?
-                                          [:focus]
-                                          nil)))
+                            :include (if (seq (:include options'))
+                                       (:include options')
+                                       (if focus-mode?
+                                         #{:focus}
+                                         #{})))
                 {:keys [fail error]} (test options'')]
             (System/exit (if (zero? (+ fail error)) 0 1)))
           (finally
