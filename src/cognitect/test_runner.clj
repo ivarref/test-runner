@@ -1,5 +1,6 @@
 (ns cognitect.test-runner
-  (:require [clojure.tools.namespace.find :as find]
+  (:require [clojure.string :as str]
+            [clojure.tools.namespace.find :as find]
             [clojure.java.io :as io]
             [clojure.test :as test]
             [clojure.tools.cli :as cli])
@@ -84,6 +85,19 @@
 (defonce start-time (atom nil))
 
 
+(defn esc [c s]
+  (assert (string? s))
+  (str "\u001B[" c
+       s
+       "\u001B[0m"))
+
+(defn green [& s]
+  (esc "32m" (str/join " " s)))
+
+(defn red [& s]
+  (esc "31m" (str/join " " s)))
+
+
 (defmethod test/report :summary [m]
   (let [spent-ms (- (System/currentTimeMillis)
                     @start-time)
@@ -92,7 +106,10 @@
       (println "\nRan" (:test m) "tests containing"
                (+ (:pass m) (:fail m) (:error m)) "assertions in"
                spent-secs)
-      (println (:fail m) "failures," (:error m) "errors."))))
+      (if (pos-int? (+ (:fail m)
+                       (:error m)))
+        (println (red (:fail m) "failures," (:error m) "errors."))
+        (println (green (:fail m) "failures," (:error m) "errors."))))))
 
 
 (defn test
