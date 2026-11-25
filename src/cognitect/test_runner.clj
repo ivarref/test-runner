@@ -19,23 +19,38 @@
         (some #(re-matches % (name ns)) include-regexes)))))
 
 
-(defn focus-mode? [options]
+(defn is-focus-mode? [options]
   (let [dirs (or (:dir options)
                  #{"test"})
         nses (->> dirs
                   (map io/file)
                   (mapcat find/find-namespaces-in-dir))
         nses (filter (ns-filter options) nses)
-        focus-count (atom 0)]
+        focus-count (atom 0)
+        exclude (:exclude options)]
     (dorun (map require nses))
     (doseq [ns nses]
       (doseq [[_name var] (ns-publics ns)]
         (when (:test (meta var))
-          (when (:focus (meta var))
+          (when
+            (:focus (meta var))
             (swap! focus-count inc)))))
-    (if (pos-int? @focus-count)
-      true
-      false)))
+    (let [focus-mode? (pos-int? @focus-count)
+          skip-count (atom 0)]
+      (doseq [ns nses]
+        (doseq [[_name var] (ns-publics ns)]
+          (when (:test (meta var))
+            (if focus-mode?
+              (if (:focus (meta var))
+                nil
+                (swap! skip-count inc))
+              (when exclude
+                (when ((apply some-fn exclude) (meta var))
+                  (swap! skip-count inc)))))))
+      [(if focus-mode?
+         true
+         false)
+       @skip-count])))
 
 
 (defn- var-filter
@@ -134,10 +149,15 @@
         nses (->> dirs
                   (map io/file)
                   (mapcat find/find-namespaces-in-dir))
-        nses (filter (ns-filter options) nses)]
-    (if focus-mode?
-      (println (format "\nRunning focused tests in %s" dirs))
-      (println (format "\nRunning all tests in %s" dirs)))
+        nses (filter (ns-filter options) nses)
+        skip-count (:skip-count options)]
+    (if (= skip-count 0)
+      (if focus-mode?
+        (println (format "\nRunning focused tests in %s" dirs))
+        (println (format "\nRunning all tests in %s" dirs)))
+      (if focus-mode?
+        (println (format "\nRunning focused tests in %s, skipping %d" dirs skip-count))
+        (println (format "\nRunning tests in %s, skipping %d" dirs skip-count))))
     (dorun (map require nses))
     (try
       (filter-vars! nses (var-filter options))
@@ -200,20 +220,25 @@
                 all (:all options')
                 excludes (if (seq (:exclude options'))
                            (:exclude options')
-                           #{:exclude :skip :ignore})
-                focus-mode? (if all
-                              false
-                              (focus-mode? options'))
+                           (if all
+                             nil
+                             #{:exclude :skip :ignore}))
+                [focus-mode? skip-count] (if all
+                                           [false 0]
+                                           (is-focus-mode? (assoc options'
+                                                             :exclude excludes)))
+                includes (if (seq (:include options'))
+                           (:include options')
+                           (if all
+                             nil
+                             (if focus-mode?
+                               #{:focus}
+                               nil)))
                 options'' (assoc options'
-                            :exclude (if all
-                                       #{}
-                                       excludes)
+                            :exclude excludes
+                            :skip-count skip-count
                             :focus-mode? focus-mode?
-                            :include (if (seq (:include options'))
-                                       (:include options')
-                                       (if focus-mode?
-                                         #{:focus}
-                                         #{})))
+                            :include includes)
                 {:keys [fail error]} (test options'')]
             (System/exit (if (zero? (+ fail error)) 0 1)))
           (finally

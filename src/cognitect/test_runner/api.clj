@@ -5,14 +5,15 @@
 
 
 (defn- do-test
-  [{:keys [dirs nses patterns vars includes excludes focus-mode?]}]
+  [{:keys [dirs nses patterns vars includes excludes focus-mode? skip-count]}]
   (let [adapted {:dir             (when (seq dirs) (set dirs))
                  :namespace       (when (seq nses) (set nses))
                  :namespace-regex (when (seq patterns) (map re-pattern patterns))
                  :var             (when (seq vars) (set vars))
                  :include         (when (seq includes) (set includes))
                  :exclude         (when (seq excludes) (set excludes))
-                 :focus-mode?     focus-mode?}]
+                 :focus-mode?     focus-mode?
+                 :skip-count      skip-count}]
     (tr/test adapted)))
 
 
@@ -42,17 +43,21 @@
                  :namespace       (when (seq nses) (set nses))
                  :namespace-regex (when (seq patterns) (map re-pattern patterns))
                  :excludes        (if all
-                                    #{}
+                                    nil
                                     (if (seq excludes)
                                       excludes
                                       [:exclude
                                        :skip
                                        :ignore]))}
-        focus-mode? (if all
-                      false
-                      (tr/focus-mode? adapted))
+        [focus-mode? skip-count] (if all
+                                   [false 0]
+                                   (tr/is-focus-mode?
+                                     (assoc adapted
+                                       :exclude (when (seq (:excludes adapted))
+                                                  (set (:excludes adapted))))))
         adapted' (assoc adapted
                    :focus-mode? focus-mode?
+                   :skip-count skip-count
                    :includes (if (seq includes)
                                includes
                                (if focus-mode?
