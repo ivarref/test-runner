@@ -101,25 +101,26 @@
 (defn- plural [s n]
   (if (or (= n 0)
           (>= n 2))
-    s
-    (str s "s")))
+    (str s "s")
+    s))
 
 
 (defmethod test/report :summary [m]
   (let [spent-ms (- (System/currentTimeMillis)
                     @start-time)
         spent-secs (format "%.3f secs." (double (/ spent-ms 1000)))
-        assertions-count (+ (:pass m) (:fail m) (:error m))]
+        assertions-count (+ (:pass m) (:fail m) (:error m))
+        fail-str (str (:fail m) " " (plural "failure" (:fail m)) ",")
+        error-str (str (:error m) " " (plural "error" (:error m)) ".")
+        overview-str (str fail-str " " error-str)]
     (test/with-test-out
       (println "\nRan" (:test m) (plural "test" (:test m)) "containing"
                assertions-count (plural "assertion" assertions-count) "in"
                spent-secs)
       (if (pos-int? (+ (:fail m)
                        (:error m)))
-        (println (red (:fail m) (str (plural "failures" (:fail m)) ",")
-                      (:error m) (str (plural "error" (:error m)) ".")))
-        (println (green (:fail m) (str (plural "failures" (:fail m)) ",")
-                        (:error m) (str (plural "error" (:error m)) ".")))))))
+        (println (red overview-str))
+        (println (green overview-str))))))
 
 
 (defn test
